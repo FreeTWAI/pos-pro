@@ -7,11 +7,11 @@
 
 工坊 fork 未與中央會員、供貨或商店資料雙向同步，也不是平台支付 gateway 或多租戶正式部署。
 
-工坊 Fork：上游產品／授權來源為 [Hao0321/pos-pro](https://github.com/Hao0321/pos-pro)；本次協作的 Issue／PR 送到 **FreeTWAI-AI/pos-pro**，不是自動送往上游。
+工坊 Fork：上游產品／授權來源為 [Hao0321/pos-pro](https://github.com/Hao0321/pos-pro)；本次協作的 Issue／PR 送到 **FreeTWAI/pos-pro**，不是自動送往上游。
 
-程式／內容入口：[src/](src/)、[src/utils/](src/utils/)、[electron/](electron/)、[supabase/](supabase/)、[SETUP_SUPABASE.md](SETUP_SUPABASE.md)。協作先讀 [CONTRIBUTING.md](CONTRIBUTING.md)，讓 Agent 讀 [AGENTS.md](AGENTS.md)；從[本倉 Issues](https://github.com/FreeTWAI-AI/pos-pro/issues)認領、[查看既有 PR](https://github.com/FreeTWAI-AI/pos-pro/pulls)避免重工。
+程式／內容入口：[src/](src/)、[src/utils/](src/utils/)、[electron/](electron/)、[supabase/](supabase/)、[SETUP_SUPABASE.md](SETUP_SUPABASE.md)。協作先讀 [CONTRIBUTING.md](CONTRIBUTING.md)，讓 Agent 讀 [AGENTS.md](AGENTS.md)；從[本倉 Issues](https://github.com/FreeTWAI/pos-pro/issues)認領、[查看既有 PR](https://github.com/FreeTWAI/pos-pro/pulls)避免重工。
 
-單店 customer／庫存／儲值／帳務 DB 屬店主，不取代自由工坊中央 DB。任何 connector 需明確限定對映、權限、冪等與資料範圍；不能把 demo 帳密、未隔離 Supabase 或假交易當正式驗證。 跨 repo 的協定由[中央平台](https://github.com/FreeTWAI-AI/freedom-platform)維護。
+單店 customer／庫存／儲值／帳務 DB 屬店主，不取代自由工坊中央 DB。任何 connector 需明確限定對映、權限、冪等與資料範圍；不能把 demo 帳密、未隔離 Supabase 或假交易當正式驗證。 跨 repo 的協定由[中央平台](https://github.com/FreeTWAI/freedom-platform)維護。
 <!-- freedom-repository-guide:end -->
 
 <p align="center">
