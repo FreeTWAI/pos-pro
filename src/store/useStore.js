@@ -14,6 +14,7 @@ import {
 } from '../utils/dataAccess'
 import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, payloadFromExpiring, getWebhookConfig } from '../utils/webhook'
 import { getReorderList, getExpiringProducts } from '../utils/analytics'
+import { safeAdd, safeSubtract, safeMultiply, validateCartItem } from '../utils/security'
 
 const SEED_PRODUCTS = [
   { id:'p001', name:'花生糖',    category:'自包裝糖果', price:30,  cost:15,  stock:50, barcode:'',             unit:'包',  noBarcode:true  },
@@ -184,19 +185,19 @@ export function useStore(){
   const addToCart = useCallback((product,qty=1)=>{
     setCart(prev=>{
       const idx=prev.findIndex(i=>i.id===product.id)
-      if(idx>=0){const next=[...prev];next[idx]={...next[idx],qty:next[idx].qty+qty};return next}
-      return [...prev,{...product,qty}]
+      if(idx>=0){const next=[...prev];next[idx]=validateCartItem({...next[idx],qty:next[idx].qty+qty});return next}
+      return [...prev,validateCartItem({...product,qty})]
     })
   },[])
   const removeFromCart = useCallback(id=>setCart(p=>p.filter(i=>i.id!==id)),[])
-  const updateCartQty  = useCallback((id,qty)=>{if(qty<=0){setCart(p=>p.filter(i=>i.id!==id));return}setCart(p=>p.map(i=>i.id===id?{...i,qty}:i))},[])
+  const updateCartQty  = useCallback((id,qty)=>{if(qty<=0){setCart(p=>p.filter(i=>i.id!==id));return}setCart(p=>p.map(i=>i.id===id?validateCartItem({...i,qty}):i))},[])
   const updateCartItemPrice = useCallback((id, price) => {
     if (price < 0 || isNaN(price)) return
-    setCart(p => p.map(i => i.id === id ? { ...i, price } : i))
+    setCart(p => p.map(i => i.id === id ? validateCartItem({ ...i, price }) : i))
   }, [])
   const clearCart      = useCallback(()=>{setCart([]);setActiveMember(null)},[])
 
-  const cartSubtotal = cart.reduce((s,i)=>s+i.price*i.qty,0)
+  const cartSubtotal = cart.reduce((s,i)=>safeAdd(s, safeMultiply(i.price, i.qty)),0)
   const cartCount    = cart.reduce((s,i)=>s+i.qty,0)
 
   // payments: [{method:'cash',amount:50},{method:'card',amount:50}]，若沒帶就用 payMethod+paid
@@ -207,9 +208,9 @@ export function useStore(){
     const usePoints  = activeMember ? Math.min(Math.max(0, pointsUsed),  activeMember.points  || 0) : 0
     const useBalance = activeMember ? Math.min(Math.max(0, balanceUsed), activeMember.balance || 0) : 0
     const subtotal = cartSubtotal
-    const pointsDiscount = usePoints * (pointsRule.redeem || 1)
-    const totalDiscount = pointsDiscount + manualDiscountAmt + useBalance
-    const total = Math.max(0, subtotal - totalDiscount)
+    const pointsDiscount = safeMultiply(usePoints, pointsRule.redeem || 1)
+    const totalDiscount = safeAdd(pointsDiscount, manualDiscountAmt, useBalance)
+    const total = Math.max(0, safeSubtract(subtotal, totalDiscount))
     let pointsEarned = Math.floor(total / (pointsRule.earn || 10))
 
     // 生日贈點：本月生日 & 本月尚未發放
@@ -230,9 +231,9 @@ export function useStore(){
     if (!actualPayments || !actualPayments.length) {
       actualPayments = [{ method: payMethod || 'cash', amount: total }]
     }
-    const totalPaid = actualPayments.reduce((s,p) => s + (p.amount||0), 0)
+    const totalPaid = actualPayments.reduce((s,p) => safeAdd(s, (p.amount||0)), 0)
     const change = (payMethod === 'cash' || actualPayments.some(p=>p.method==='cash'))
-      ? Math.max(0, paid - total) : 0
+      ? Math.max(0, safeSubtract(paid, total)) : 0
 
     const order = {
       id: 'O' + Date.now(),
@@ -313,15 +314,15 @@ export function useStore(){
     }).filter(i => i.qty > 0)
     if (!clampedItems.length) return null   // 已全部退完，無可退數量
 
-    const refundSubtotal = clampedItems.reduce((s,i) => s + i.price * i.qty, 0)
+    const refundSubtotal = clampedItems.reduce((s,i) => safeAdd(s, safeMultiply(i.price, i.qty)), 0)
     // 守衛分母用 subtotal（折扣按小計比例分攤），避免全額折抵(total=0) 時誤判或除以零
     const ratio = origOrder.subtotal > 0 ? refundSubtotal / origOrder.subtotal : 0
     const refundDiscount = Math.round((origOrder.discount || 0) * ratio)
     const refundManual = Math.round((origOrder.manualDiscount || 0) * ratio)
-    const refundTotal = refundSubtotal - refundDiscount - refundManual
+    const refundTotal = safeSubtract(refundSubtotal, safeAdd(refundDiscount, refundManual))
     // 原單若用儲值付款，按比例退回儲值，其餘才退現金/原付款；避免「用儲值買、退貨卻全拿現金而儲值沒還」
     const restoredBalance = Math.round((origOrder.balanceUsed || 0) * ratio)
-    const cashRefund = refundTotal - restoredBalance   // 真正退回現金/電子的金額（restoredBalance 退回儲值卡）
+    const cashRefund = safeSubtract(refundTotal, restoredBalance)   // 真正退回現金/電子的金額（restoredBalance 退回儲值卡）
     const refundPointsEarned = -(Math.floor(refundTotal / (pointsRule.earn || 10)))
     const refundPointsUsed = -Math.round((origOrder.pointsUsed || 0) * ratio)
 

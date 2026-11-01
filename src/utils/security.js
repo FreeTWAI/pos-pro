@@ -399,3 +399,35 @@ export function startIdleTimer(onLock) {
 export function clearIdleTimer() {
   if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
 }
+
+// ── 11. 交易與訂單安全計算 ──────────────────────────────────────────
+
+// 防止浮點數誤差 (IEEE 754) 的安全加總與減法
+export function safeAdd(...nums) {
+  const sum = nums.reduce((acc, val) => acc + (Number(val) || 0), 0)
+  return Math.round(sum * 100) / 100
+}
+
+export function safeSubtract(a, b) {
+  return Math.round(((Number(a) || 0) - (Number(b) || 0)) * 100) / 100
+}
+
+export function safeMultiply(a, b) {
+  return Math.round(((Number(a) || 0) * (Number(b) || 0)) * 100) / 100
+}
+
+// 訂單明細數量與價格邊界檢查
+export function validateCartItem(item) {
+  const qty = Math.max(1, Math.min(9999, Math.floor(Number(item.qty) || 1)))
+  let price = Number(item.price) || 0
+  price = Math.max(0, Math.min(999999, price))
+  price = Math.round(price * 100) / 100
+  return { ...item, qty, price }
+}
+
+// 防範 ESC/POS 注入攻擊的字串過濾 (印表機)
+export function sanitizePrintText(text) {
+  if (typeof text !== 'string') return ''
+  // 移除 ASCII 控制字元 (0x00~0x1F, 0x7F)，但保留換行 \n (0x0A)
+  return text.replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '')
+}
