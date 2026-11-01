@@ -105,7 +105,13 @@ async function printReceipt(orderData, settings) {
   const storeName = settings.storeName || '雜貨店 POS'
   const storeAddr = settings.storeAddress || ''
   const storePhone = settings.storePhone || ''
-  const footer = settings.receiptFooter || '感謝您的光臨！'
+  // 防範 ESC/POS 注入攻擊的字串過濾 (印表機)
+function sanitizePrintText(text) {
+  if (typeof text !== 'string') return ''
+  // 移除 ASCII 控制字元 (0x00~0x1F, 0x7F)，但保留換行 \n (0x0A)
+  return text.replace(/[\x00-\x09\x0B-\x1F\x7F]/g, '')
+}
+  const footer = sanitizePrintText(settings.receiptFooter || '感謝您的光臨！')
   const width = parseInt(settings.receiptWidth || '32')
 
   const data = []
