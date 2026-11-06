@@ -31,10 +31,13 @@ export default function ReportsPage({ store }) {
   const prevRevenue = prev.reduce((s,o)=>s+o.total,0)
   const revDelta = prevRevenue ? ((revenue-prevRevenue)/prevRevenue*100).toFixed(1) : null
 
-  const profit = useMemo(()=> filtered.reduce((s,o)=> s + o.items.reduce((a,i)=>{
-    const p = products.find(x=>x.id===i.id)
-    return a + (p ? (i.price-(p.cost||0))*i.qty : 0)
-  },0), 0), [filtered, products])
+  const profit = useMemo(() => {
+    const productMap = new Map(products.map(p => [p.id, p]))
+    return filtered.reduce((s, o) => s + o.items.reduce((a, i) => {
+      const p = productMap.get(i.id)
+      return a + (p ? (i.price - (p.cost || 0)) * i.qty : 0)
+    }, 0), 0)
+  }, [filtered, products])
 
   const avgOrder = filtered.length ? Math.round(revenue / filtered.length) : 0
   const newMembers = members.filter(m => {
